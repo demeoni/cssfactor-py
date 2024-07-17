@@ -202,6 +202,7 @@ class Parser:
         self.current = 0
         self.errors = []
         self.progress_callback = None
+        self.max_iterations = 10000  # Safeguard against infinite loops
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
@@ -236,18 +237,6 @@ class Parser:
                 return charset
         return None
 
-    def parse_charset(self) -> Optional[str]:
-        # Implementation of charset parsing
-        pass
-
-    def parse_imports(self) -> List[Tuple[str, List[str]]]:
-        # Implementation of import parsing
-        pass
-
-    def parse_statements(self) -> List[Statement]:
-        # Implementation of statement parsing
-        pass
-        return None
 
     def parse_imports(self) -> List[Tuple[str, List[str]]]:
         imports = []
