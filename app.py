@@ -4,12 +4,25 @@ from flask import Flask, request, render_template, jsonify, send_file
 from css_factor import process_css
 import os
 import time
+import markdown
+import re
 
 app = Flask(__name__)
 
+def custom_css_formatter(source):
+    return f'<pre><code class="language-css">{source}</code></pre>'
+
+def format_css_blocks(md):
+    pattern = re.compile(r'```css\n(.*?)\n```', re.DOTALL)
+    return pattern.sub(lambda m: custom_css_formatter(m.group(1)), md)
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    with open('static/guide.md', 'r') as f:
+        guide_content = f.read()
+    formatted_guide = format_css_blocks(guide_content)
+    guide_html = markdown.markdown(formatted_guide)
+    return render_template('index.html', guide=guide_html)
 
 @app.route('/process', methods=['POST'])
 def process():
