@@ -1,9 +1,8 @@
-# File: css_factor.py
-
 import re
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 import argparse
+import sys
 
 @dataclass
 class Stylesheet:
@@ -196,12 +195,12 @@ def tokenize(css: str, progress_callback=None) -> List[Tuple[str, str]]:
             progress_callback(int((i + 1) / len(css) * 100))
     return tokens
 
-# Parser
+# Parser class
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.current = 0
-        self.errors = []  # Initialize the errors list
+        self.errors = []
         self.progress_callback = None
 
     def set_progress_callback(self, callback):
@@ -209,13 +208,24 @@ class Parser:
 
     def parse(self) -> Stylesheet:
         try:
+            self.log("Starting to parse charset")
             charset = self.parse_charset()
+            self.log(f"Parsed charset: {charset}")
+
+            self.log("Starting to parse imports")
             imports = self.parse_imports()
+            self.log(f"Parsed imports: {imports}")
+
+            self.log("Starting to parse statements")
             statements = self.parse_statements()
-            return Stylesheet(charset, imports, statements)
+            self.log(f"Parsed {len(statements)} statements")
+
+            return Stylesheet(charset, imports or [], statements or [])
         except Exception as e:
-            self.errors.append(f"Error during parsing: {str(e)}")
-            return Stylesheet(None, [], [])  # Return an empty list of statements instead of None
+            error_msg = f"Error during parsing: {str(e)}"
+            self.errors.append(error_msg)
+            self.log(error_msg)
+            return Stylesheet(None, [], [])
 
     def parse_charset(self) -> Optional[str]:
         if self.match('IDENT', 'charset'):
@@ -224,7 +234,7 @@ class Parser:
                 charset = self.previous()[1]
                 self.consume('SEMICOLON')
                 return charset
-            return None
+        return None
 
     def parse_charset(self) -> Optional[str]:
         # Implementation of charset parsing
@@ -237,15 +247,7 @@ class Parser:
     def parse_statements(self) -> List[Statement]:
         # Implementation of statement parsing
         pass
-
         return None
-
-
-if __name__ == "__main__":
-    import sys
-    css_input = sys.stdin.read()
-    factored_css = factor_css(css_input)
-    print(factored_css)
 
     def parse_imports(self) -> List[Tuple[str, List[str]]]:
         imports = []
@@ -267,12 +269,19 @@ if __name__ == "__main__":
     def parse_statements(self) -> List[Statement]:
         statements = []
         while not self.is_at_end():
+            self.log(f"Parsing statement at position {self.current}")
             if self.match('IDENT', 'media'):
                 statements.append(self.parse_media())
             elif self.match('IDENT', 'page'):
                 statements.append(self.parse_page())
             else:
-                statements.append(self.parse_ruleset())
+                try:
+                    statements.append(self.parse_ruleset())
+                except Exception as e:
+                    self.log(f"Error parsing ruleset: {str(e)}")
+                    self.synchronize()
+            if self.progress_callback:
+                self.progress_callback(self.current)
         return statements
 
     def parse_media(self) -> Media:
@@ -421,8 +430,11 @@ if __name__ == "__main__":
         self.errors.append(error_msg)
         raise Exception(error_msg)
 
-    # whitespace remover
+    def log(self, message):
+        print(f"Parser: {message}", file=sys.stderr)
+        self.errors.append(message)
 
+    # whitespace remover
     def consume_whitespace(self):
         while self.match('S'):
             pass
@@ -477,13 +489,6 @@ if __name__ == "__main__":
                 return True
         return False
 
-    def match(self, *types):
-        for type in types:
-            if self.check(type):
-                self.advance()
-                return True
-        return False
-
     def check(self, type):
         if self.is_at_end():
             return False
@@ -492,8 +497,6 @@ if __name__ == "__main__":
     def advance(self):
         if not self.is_at_end():
             self.current += 1
-            if self.progress_callback:
-                self.progress_callback(self.current)
         return self.previous()
 
     def is_at_end(self):
@@ -548,10 +551,12 @@ def render_stylesheet(stylesheet: Stylesheet) -> str:
     output = []
     if stylesheet.charset:
         output.append(f'@charset {stylesheet.charset};')
-    for url, media in stylesheet.imports:
-        output.append(f'@import {url} {" ".join(media)};')
-    for statement in stylesheet.statements:
-        output.append(render_statement(statement))
+    if stylesheet.imports:
+        for url, media in stylesheet.imports:
+            output.append(f'@import {url} {" ".join(media)};')
+    if stylesheet.statements:
+        for statement in stylesheet.statements:
+            output.append(render_statement(statement))
     return '\n'.join(output)
 
 def render_statement(statement: Statement) -> str:
@@ -630,26 +635,6 @@ def render_value(value: Value) -> str:
         values = ' '.join(render_value(v) for v in value.values)
         return f'{value.name}({values})'
 
-def main():
-    parser = argparse.ArgumentParser(description='Factor CSS stylesheets.')
-    parser.add_argument('--mode', choices=['factor', 'explode', 'identity'], default='factor',
-                        help='Processing mode (default: factor)')
-    args = parser.parse_args()
-
-    css_input = sys.stdin.read()
-    tokens = list(tokenize(css_input))
-    css_parser = Parser(tokens)
-    stylesheet = css_parser.parse()
-
-    if args.mode == 'factor':
-        factored_stylesheet = factor_css(stylesheet)
-        print(render_stylesheet(factored_stylesheet))
-    elif args.mode == 'explode':
-        exploded_stylesheet = explode_css(stylesheet)
-        print(render_stylesheet(exploded_stylesheet))
-    elif args.mode == 'identity':
-        print(render_stylesheet(stylesheet))
-
 def explode_css(stylesheet: Stylesheet, progress_callback=None) -> Stylesheet:
     exploded_statements = []
     total_statements = len(stylesheet.statements)
@@ -671,6 +656,30 @@ def explode_ruleset(ruleset: Ruleset) -> List[Ruleset]:
         for declaration in ruleset.declarations:
             exploded_rulesets.append(Ruleset([selector], [declaration]))
     return exploded_rulesets
+
+def main():
+    parser = argparse.ArgumentParser(description='Factor CSS stylesheets.')
+    parser.add_argument('--mode', choices=['factor', 'explode', 'identity'], default='factor',
+                        help='Processing mode (default: factor)')
+    args = parser.parse_args()
+
+    css_input = sys.stdin.read()
+    tokens = list(tokenize(css_input))
+    css_parser = Parser(tokens)
+    stylesheet = css_parser.parse()
+
+    print("Parsing errors:", file=sys.stderr)
+    for error in css_parser.errors:
+        print(error, file=sys.stderr)
+
+    if args.mode == 'factor':
+        factored_stylesheet = factor_css(stylesheet)
+        print(render_stylesheet(factored_stylesheet))
+    elif args.mode == 'explode':
+        exploded_stylesheet = explode_css(stylesheet)
+        print(render_stylesheet(exploded_stylesheet))
+    elif args.mode == 'identity':
+        print(render_stylesheet(stylesheet))
 
 if __name__ == "__main__":
     main()

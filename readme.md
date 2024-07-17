@@ -1,11 +1,10 @@
-# CssFactor
+# CssFactor (Python)
 Converted of This Project
 Original code is in Java:
-http://zamez.org/source/factorcss/
-http://zamez.org/factorcss
+http://zamez.org/source/factorcss/ - http://zamez.org/factorcss
 by [James Bursa](https://github.com/jamesbursa)
 
-Converted to Pyhton by [demeoni](https://github.com/demeoni)
+Converted to Python by [demeoni](https://github.com/demeoni)
 Thanks to "Claude 3.5 Sonnet" by Anthropic
 
 ## Aim of the project
@@ -24,7 +23,8 @@ I hope it will work in Py too.
 ### 17.07.2024
 
 ### Backend
-* Added tqdm, (tqdm is a fast, extensible progress bar for Python and CLI) will provide a visual progress indicator for the CSS processing steps.
+* Added tqdm for Frontend Console view,
+* Added tqdm for Backend Terminal view, (tqdm is a fast, extensible progress bar for Python and CLI) will provide a visual progress indicator for the CSS processing steps,
 * Added a consume whitespace method to skip over unexpected whitespace.
 * Added error handling in frontend and a synchronize method to recover from parsing errors.
 

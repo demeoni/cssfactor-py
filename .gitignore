@@ -3,3 +3,5 @@ __pycache__/
 .safe/
 .venv/
 myenv/
+requirements.txt
+errors.txt
