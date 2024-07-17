@@ -6,4 +6,4 @@ myenv/
 requirements.txt
 errors.txt
 .temp/
-./static/output/*.*
+static/output/
