@@ -5,3 +5,4 @@ __pycache__/
 myenv/
 requirements.txt
 errors.txt
+.temp/
