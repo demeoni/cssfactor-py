@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Factor Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .left-panel {
+            flex: 1;
+            padding-right: 20px;
+            overflow-y: auto;
+        }
+        
+        .right-panel {
+            flex: 1;
+            padding-left: 20px;
+            border-left: 1px solid #ccc;
+            overflow-y: auto;
+        }
+        
+        h1,
+        h2 {
+            color: #333;
+        }
+        
+        form {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        label,
+        select,
+        input[type="file"],
+        input[type="submit"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        
+        #downloadBtn {
+            display: none;
+            margin-top: 10px;
+        }
+        
+        #guide {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        
+        #console {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 5px;
+            margin-top: 20px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .console-info {
+            color: #569cd6;
+        }
+        
+        .console-error {
+            color: #f44747;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            background-color: #f0f0f0;
+            padding: 3px;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+        }
+        
+        .progress-bar-fill {
+            display: block;
+            height: 22px;
+            background-color: #659cef;
+            border-radius: 3px;
+            transition: width 500ms ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h1>CSS Factor Tool</h1>
+            <form id="cssForm" enctype="multipart/form-data">
+                <label for="mode">Select mode:</label>
+                <select id="mode" name="mode">
+                    <option value="factor">Factor</option>
+                    <option value="explode">Explode</option>
+                    <option value="identity">Identity</option>
+                </select>
+                <label for="cssFile">Select CSS file:</label>
+                <input type="file" id="cssFile" name="cssFile" accept=".css">
+                <input type="submit" value="Process CSS">
+            </form>
+            <div id="result"></div>
+            <button id="downloadBtn">Download Processed CSS</button>
+            <div id="console"></div>
+        </div>
+        <div class="right-panel">
+            <h2>Guide</h2>
+            <div id="guide"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const form = document.getElementById('cssForm');
+        const resultDiv = document.getElementById('result');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const guideDiv = document.getElementById('guide');
+        const consoleDiv = document.getElementById('console');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressTask = document.getElementById('progressTask');
+        const progressBarFill = document.querySelector('.progress-bar-fill');
+
+        const socket = io();
+
+        socket.on('log', function(data) {
+            logToConsole(data.message);
+        });
+
+        socket.on('progress', function(data) {
+            progressContainer.style.display = 'block';
+            progressTask.textContent = data.task;
+            progressBarFill.style.width = `${data.progress}%`;
+        });
+
+        function logToConsole(message, type = 'info') {
+            const logElement = document.createElement('div');
+            logElement.classList.add(`console-${type}`);
+            logElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleDiv.appendChild(logElement);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        // Load and render the guide
+        fetch('/static/guide.md')
+            .then(response => response.text())
+            .then(text => {
+                guideDiv.innerHTML = marked.parse(text);
+                logToConsole('Guide loaded successfully');
+            })
+            .catch(error => {
+                logToConsole('Error loading guide: ' + error.message, 'error');
+            });
+
+        form.addEventListener('submit', async(e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            logToConsole('Processing CSS...');
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Log all messages from the server
+                data.logs.forEach(log => {
+                    if (log.startsWith('Error') || log.startsWith('Parsing error')) {
+                        logToConsole(log, 'error');
+                    } else {
+                        logToConsole(log);
+                    }
+                });
+
+                if (response.ok) {
+                    resultDiv.textContent = data.result;
+                    resultDiv.classList.remove('error');
+                    downloadBtn.style.display = 'block';
+                    logToConsole('CSS processed successfully');
+                } else {
+                    resultDiv.textContent = data.error || 'An error occurred while processing the CSS.';
+                    resultDiv.classList.add('error');
+                    downloadBtn.style.display = 'none';
+                    logToConsole('Error processing CSS: ' + data.error, 'error');
+                }
+            } catch (error) {
+                resultDiv.textContent = 'An error occurred while sending the request.';
+                resultDiv.classList.add('error');
+                downloadBtn.style.display = 'none';
+                logToConsole('Error sending request: ' + error.message, 'error');
+            }
+        });
+
+
+        downloadBtn.addEventListener('click', () => {
+            const processedCSS = resultDiv.textContent;
+            const blob = new Blob([processedCSS], {
+                type: 'text/css'
+            });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'processed.css';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            logToConsole('Processed CSS downloaded');
+        });
+
+        logToConsole('Application initialized');
+    </script>
+</body>
+
+</html>
