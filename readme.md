@@ -1,13 +1,15 @@
+# CssFactor
 Converted of This Project
-Original is Java code:
+Original code is in Java:
 http://zamez.org/source/factorcss/
 http://zamez.org/factorcss
-by James Bursa - https://github.com/jamesbursa
+by [James Bursa](https://github.com/jamesbursa)
 
-Converted to Pyhton by demeoni,
-Thank to Claude 3.5 Sonnet
+Converted to Pyhton by [demeoni](https://github.com/demeoni)
+Thanks to "Claude 3.5 Sonnet" by Anthropic
 
-Aim of the project is, delete duplicates from CSS file to make it better. Many people used it for merge 2 css files into 1 css. First you have to merge manually in 1 css first. Than upload here to let the magic work.
+## Aim of the project
+Aim of the project is, delete duplicates from CSS file to make it better reading for dev team. Many people used it for merge 2 css files into 1 css. First you have to merge manually in 1 css first. Than upload here to let the magic work.
 
 I hope it will work in Py too.
 

@@ -1,5 +1,3 @@
-# File: app.py
-
 from flask import Flask, request, render_template, send_from_directory, jsonify
 from flask_socketio import SocketIO, emit
 from css_factor import tokenize, Parser, factor_css, explode_css, render_stylesheet
@@ -61,7 +59,6 @@ def process_css():
         for _ in tqdm(tokenize(css_input), desc="Tokenizing", file=tqdm_out, unit=" tokens"):
             tokens.append(_)
             time.sleep(0.01)  # Artificial delay for demonstration
-            socketio.emit('progress', {'task': 'Tokenizing', 'progress': len(tokens) / len(css_input) * 100})
         log(f"Generated {len(tokens)} tokens")
 
         log("Parsing CSS")
@@ -69,11 +66,10 @@ def process_css():
         with tqdm(total=len(tokens), desc="Parsing", file=tqdm_out, unit=" tokens") as pbar:
             def update_progress(progress):
                 pbar.update(progress - pbar.n)
-                socketio.emit('progress', {'task': 'Parsing', 'progress': progress / len(tokens) * 100})
             css_parser.set_progress_callback(update_progress)
             stylesheet = css_parser.parse()
 
-        if css_parser.errors:
+        if hasattr(css_parser, 'errors') and css_parser.errors:
             for error in css_parser.errors:
                 log(f"Parsing error: {error}")
 
@@ -87,14 +83,12 @@ def process_css():
             with tqdm(total=100, desc="Factoring", file=tqdm_out, unit="%") as pbar:
                 def factor_progress(progress):
                     pbar.update(progress - pbar.n)
-                    socketio.emit('progress', {'task': 'Factoring', 'progress': progress})
                 processed_stylesheet = factor_css(stylesheet, factor_progress)
         elif mode == 'explode':
             log("Exploding CSS")
             with tqdm(total=100, desc="Exploding", file=tqdm_out, unit="%") as pbar:
                 def explode_progress(progress):
                     pbar.update(progress - pbar.n)
-                    socketio.emit('progress', {'task': 'Exploding', 'progress': progress})
                 processed_stylesheet = explode_css(stylesheet, explode_progress)
         else:  # identity
             log("Processing CSS in identity mode")

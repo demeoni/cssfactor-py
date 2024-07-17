@@ -201,17 +201,21 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.current = 0
-        self.errors = []
+        self.errors = []  # Initialize the errors list
         self.progress_callback = None
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
 
     def parse(self) -> Stylesheet:
-        charset = self.parse_charset()
-        imports = self.parse_imports()
-        statements = self.parse_statements()
-        return Stylesheet(charset, imports, statements)
+        try:
+            charset = self.parse_charset()
+            imports = self.parse_imports()
+            statements = self.parse_statements()
+            return Stylesheet(charset, imports, statements)
+        except Exception as e:
+            self.errors.append(f"Error during parsing: {str(e)}")
+            return Stylesheet(None, [], [])  # Return an empty list of statements instead of None
 
     def parse_charset(self) -> Optional[str]:
         if self.match('IDENT', 'charset'):
@@ -220,12 +224,7 @@ class Parser:
                 charset = self.previous()[1]
                 self.consume('SEMICOLON')
                 return charset
-
-
-    def __init__(self, tokens):
-        self.tokens = tokens
-        self.current = 0
-
+            return None
 
     def parse_charset(self) -> Optional[str]:
         # Implementation of charset parsing
@@ -241,13 +240,6 @@ class Parser:
 
         return None
 
-# Main function
-def factor_css(css: str) -> str:
-    tokens = list(tokenize(css))
-    parser = Parser(tokens)
-    stylesheet = parser.parse()
-    # Implement factoring logic here
-    return str(stylesheet)  # Placeholder, implement proper rendering
 
 if __name__ == "__main__":
     import sys
@@ -515,8 +507,8 @@ if __name__ == "__main__":
 
 def factor_css(stylesheet: Stylesheet, progress_callback=None) -> Stylesheet:
     factored_statements = []
-    total_statements = len(stylesheet.statements)
-    for i, statement in enumerate(stylesheet.statements):
+    total_statements = len(stylesheet.statements) if stylesheet.statements is not None else 0
+    for i, statement in enumerate(stylesheet.statements or []):
         if isinstance(statement, Ruleset):
             factored_statements.extend(factor_ruleset(statement))
         elif isinstance(statement, Media):
@@ -525,7 +517,7 @@ def factor_css(stylesheet: Stylesheet, progress_callback=None) -> Stylesheet:
         else:
             factored_statements.append(statement)
         if progress_callback:
-            progress_callback(int((i + 1) / total_statements * 100))
+            progress_callback(int((i + 1) / total_statements * 100) if total_statements > 0 else 100)
     return Stylesheet(stylesheet.charset, stylesheet.imports, factored_statements)
 
 def factor_ruleset(ruleset: Ruleset) -> List[Ruleset]:
