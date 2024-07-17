@@ -33,10 +33,13 @@ def process():
         return jsonify({'error': 'No selected file'}), 400
 
     mode = request.form.get('mode', 'factor')
+    remove_brackets_option = request.form.get('removeBrackets', 'false').lower() == 'true'
     css_input = file.read().decode('utf-8')
 
     try:
         result = process_css(css_input, mode)
+        if remove_brackets_option:
+            result = remove_brackets(result)
 
         # Save the result to a file
         output_filename = f"processed_{mode}_{int(time.time())}.css"

@@ -25,6 +25,7 @@ Actually It's not Fully 1-1 Converted Project. It's kind a inspired project now.
 ### Updates
 ### 17.07.2024 - evening
 
+* Added option to remove leftover { , [ ,  ] , }
 * Output file succesful.
 * Removed tqdm. Will Add later.
 * Simplified py

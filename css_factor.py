@@ -59,6 +59,10 @@ def process_css(css_input: str, mode: str) -> str:
 
     return render_css(processed_css)
 
+def remove_brackets(css: str) -> str:
+    # Remove any leftover { , [ , ] , } characters
+    return re.sub(r'[{}\[\]]', '', css)
+
 # Example usage
 if __name__ == "__main__":
     css_input = """
